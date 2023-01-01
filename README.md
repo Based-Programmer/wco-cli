@@ -22,3 +22,6 @@ mv wco-cli $PREFIX/bin/
 - curl
 - fzf
 - nodejs (for decoding the link)
+- mpv (Streaming video)
+- aria2 (Optimal, for downloading)
+
