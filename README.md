@@ -15,9 +15,9 @@ chmod +x wco-cli
 #### Termux
 ```
 mv wco-cli $PREFIX/bin/
-
-For using this script inside termux u should've mpv-android installed with "user-agent='Mozilla/5.0 (Windows NT 10.0; rv:108.0) Gecko/20100101 Firefox/108.0'" inside Settings/Advanced/'Edit mpv.conf' & no referrer
 ```
+- For using this script inside termux u should've mpv-android installed with "user-agent='Mozilla/5.0 (Windows NT 10.0; rv:108.0) Gecko/20100101 Firefox/108.0'" inside Settings/Advanced/'Edit mpv.conf' & no referrer
+
 
 ## Dependencies
 
