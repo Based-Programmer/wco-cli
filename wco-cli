@@ -15,15 +15,14 @@ while getopts 'dp:q:h' OPT; do
 done
 shift $((OPTIND - 1))
 
-[ -z "$*" ] && printf 'Search Cartoon/Anime\n>\n' && read -r name || name="$*"
-printf 'Searching Cartoon/Anime - %s\n' "$name"
+[ -z "$*" ] && printf '\033[1;35mSearch Cartoon/Anime\n> \033[0m\n' && read -r name || name="$*"
+printf '\033[1;36mSearching Cartoon/Anime - %s\033[0m\n' "$name"
 
 data="$(curl --cipher AES256-SHA256 --tls-max 1.2 -sA "$agent" 'https://www.wcostream.net/search' --data-urlencode "catara=$*" --data-urlencode "konuara=series" | sed -nE 's,^<a href="(/anime/[^"]*)".*>(.*)</a>,https://www.wcostream.net\1	\2,p')"
-[ -z "$data" ] && printf 'No result\n' && exit 1 || selected="$(printf '%s' "$data" | fzf --with-nth 2.. --height=33% --border -1 --layout=reverse --cycle --prompt 'Select a Cartoon/Anime: ')"
-#printf '%s\n' "$selected"
-title="${selected##*	}"
+[ -z "$data" ] && printf '\033[1;31mNo Result\033[0m\n' && exit 1 || selected="$(printf '%s' "$data" | fzf --with-nth 2.. --height=33% --border -1 --layout=reverse --cycle --prompt 'Select a Cartoon/Anime: ')"
+[ -z "$selected" ] && printf "Nothing's selected\n" && exit || title="${selected##*	}"
 data="$(curl --cipher AES256-SHA256 --tls-max 1.2 -sA "$agent" "${selected%%	*}" | sed -nE 's,^[[:space:]]*<li><a href="(https://www.wcostream.net/[^"]*)".*class="sonra">(.*)</a>.*,\1	\2,p')"
-[ -z "$data" ] && printf 'No result\n' && exit 1
+[ -z "$data" ] && printf '\033[1;31mNo result\033[0m\n' && exit 1
 num_ep="$(printf '%s\n' "$data" | wc -l)"
 
 selection () {
@@ -46,7 +45,7 @@ fetch_link () {
     [ -z "$link" ] && link="$(node -e "$(printf '%s' "$video_js_data" | sed -nE 's|<script>(.*)document\.write\(decodeURIComponent\(escape\(([^\)]*)\).*|\1 console.log(\2.replace(/.*src="(https:\\/\\/embed\\.watchanimesub\\.net\\/[^"]*)[\\s\\S]*/, "$1"))\;|p')")"
     #printf '%s\n' "$link" > ~/.cache/link
 
-    [ -z "$link" ] && printf 'No result from video link\n' && exit 1 || embed="$(printf '%s' "$link" | sed -nE 's,.*&embed=([^&?]*),\1,p')"
+    [ -z "$link" ] && printf '\033[1;31mNo result from video link\033[0m\n' && exit 1 || embed="$(printf '%s' "$link" | sed -nE 's,.*&embed=([^&?]*),\1,p')"
     if [ "$embed" = "www" ]; then
 	wco_dir='cizgi/'
     elif [ "$embed" = "neptun" ]; then
@@ -58,33 +57,30 @@ fetch_link () {
     #[ -z "$link" ] && printf 'No result from video-js.php\n' && exit 1 || link="$(curl --cipher AES256-SHA256 --tls-max 1.2 -sA "$agent" --referer "$link" "$link" | sed -nE 's,.*getJSON\("(/inc/embed/getvidlink\.php[^"]*).*,https://embed.watchanimesub.net\1,p')"
     #printf '%s\n' "$link" >> ~/.cache/link
 
-    [ -z "$link" ] && printf 'No result from video-js.php\n' && exit 1 || link_data="$(curl -sA "$agent" --referer "$link" -H 'X-Requested-With: XMLHttpRequest' "$link" | tr -d \\\\)"
+    [ -z "$link" ] && printf '\033[1;31mNo result from video-js.php\033[0m\n' && exit 1 || link_data="$(curl -sA "$agent" --referer "$link" -H 'X-Requested-With: XMLHttpRequest' "$link" | tr -d \\\\)"
     #printf '%s' "$link_data" > ~/.cache/wco.json
     [ "$quality" = 'hd' ] && hd='hd' || hd='f?hd' # For regex matching
     [ -z "$link_data" ] && printf 'No result form the API\n' && exit 1 || [ "$quality" = 'sd' ] || vid_link="$(printf '%s' "$link_data" | sed -nE "s,.*\"server\":\"(.[^\",]*).*\"$hd\":\"(.[^\",]*)\".*,\1/getvid?evid=\2,p")"
     [ -z "$vid_link" ] || [ "$quality" = "sd" ] && vid_link="$(printf '%s' "$link_data" | sed -nE 's,.*"enc":"(.[^",]*).*"server":"(.[^",]*).*,\2/getvid?evid=\1,p')"
-    [ -z "$vid_link" ] && printf 'No vid link\n' && exit 1
+    [ -z "$vid_link" ] && printf '\033[1;31mNo vid link\033[0m\n' && exit 1
     #printf '%s\n' "$vid_link"
 }
 
 play () {
-    printf 'Playing %s\n\n' "$ep_title"
+    printf '\033[1;33mPlaying %s out of %s\033[0m\n\n' "$ep_title" "$num_ep"
     if uname -a | grep -qE '[Aa]ndroid'; then
 	am start --user 0 -a android.intent.action.VIEW -d "$vid_link" -n is.xyz.mpv/.MPVActivity > /dev/null 2>&1 &
     else
-        mpv --force-window=immediate --force-media-title="$ep_title" --user-agent="$agent" "$vid_link" > /dev/null 2>&1 &
+        mpv --force-window=immediate --force-media-title="$ep_title out of $num_ep" --user-agent="$agent" "$vid_link" > /dev/null 2>&1 &
     fi
 }    
 
 download () {
-    printf 'Downloading %s\n\n' "$ep_title"
+    printf '\033[1;33mDownloading %s out of %s\033[0m\n' "$ep_title" "$num_ep"
     
-    if [ "$num_ep" -gt 1 ]; then
-	dir="$download_dir/$title"
-    else
-	dir="$download_dir"
-    fi
-    aria2c --user-agent="$agent" --check-certificate=false --summary-interval=0 -j 16 -x 16 -s 16 -k 1M --dir="$dir" -o "$ep_title.mp4" --download-result=hide "$vid_link" && printf 'Download Completed %s\n' "$ep_title" || printf 'Download Failed %s\n' "$ep_title"
+    [ "$num_ep" -gt 1 ] && dir="$download_dir/$title" || dir="$download_dir"
+ 
+    aria2c --user-agent="$agent" --check-certificate=false --summary-interval=0 -j 16 -x 16 -s 16 -k 1M --dir="$dir" -o "$ep_title.mp4" --download-result=hide "$vid_link" && printf '\033[1;32mDownload Completed %s\033[0m\n\n' "$ep_title" || printf '\033[1;31mDownload Failed %s\033[0m\n\n' "$ep_title"
 }    
 
 while [ "$REPLY" != 'quit' ]; do
