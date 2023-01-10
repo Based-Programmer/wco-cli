@@ -15,7 +15,7 @@ while getopts 'dp:q:h' OPT; do
 done
 shift $((OPTIND - 1))
 
-[ -z "$*" ] && printf '\033[1;35mSearch Cartoon/Anime> \033[0m' && read -r name || name="$*"
+[ -z "$*" ] && printf '\033[1;35mSearch Cartoon/Anime\n> \033[0m' && read -r name || name="$*"
 printf '\033[1;36mSearching Cartoon/Anime - %s\033[0m\n' "$name"
 
 data="$(curl --cipher AES256-SHA256 --tls-max 1.2 -sA "$agent" 'https://www.wcostream.net/search' --data-urlencode "catara=$name" --data-urlencode "konuara=series" | sed -nE 's,^<a href="(/anime/[^"]*)".*>(.*)</a>,https://www.wcostream.net\1	\2,p')"
