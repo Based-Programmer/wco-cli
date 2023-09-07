@@ -3,29 +3,35 @@
 quality="${WCO_CLI_QUALITY:-fhd}"
 is_download="${WCO_CLI_DOWNLOAD:-n}"
 download_dir="${WCO_CLI_DOWNLOAD_DIR:-$HOME/Videos}"
-agent='Mozilla/5.0'
+agent='uwu'
 wm="${WCO_CLI_WM:-false}"
 base_url='www.wcostream.org'
 
-while getopts 'dp:q:wh' OPT; do
-	case $OPT in
+while getopts 'dp:q:wa:h' OPT; do
+    case $OPT in
 	d) is_download=y ;;
 	p) is_download=y && download_dir="$OPTARG" ;;
 	q) quality=$OPTARG ;;
 	w) wm='true' ;;
-	*) printf "\nEnjoy watching Cartoons & Animes from wcostream.net\n\nDependencies: curl, fzf, nodejs(for decoding the link), mpv (Streaming video), aria2 (Optimal, for downloading)\n\nFor using this script inside termux u should've mpv-android installed with \"user-agent='Mozilla/5.0'\" inside Settings/Advanced/'Edit mpv.conf' & no referrer\n\nUsage:\nwco-cli <Options> <search term>\n\nOptions:\n-d Download Cartoons/Animes in ~/Videos\n-p Select Download Directory\n-q Select Video Quality [fhd|hd|sd]\n-w Use this option if fzf breaks due to tiling in ur WM or just export WCO_CLI_WM='true'\n-h For what u r seeing right now\n" && exit 1 ;;
+	a) anime_link="$OPTARG" ;;
+	*) printf "\nEnjoy watching Cartoons & Animes from wcostream.net\n\nDependencies: curl, fzf, nodejs(for decoding the link), mpv (Streaming video), aria2 (Optimal, for downloading)\n\nFor using this script inside termux u should've mpv-android installed with \"user-agent='Mozilla/5.0'\" inside Settings/Advanced/'Edit mpv.conf' & no referrer\n\nUsage:\nwco-cli <Options> <search term>\n\nOptions:\n-d Download Cartoons/Animes in ~/Videos\n-p Select Download Directory\n-q Select Video Quality [fhd|hd|sd]\n-a Direct Anime Link like -a https://www.wcostream.org/anime/death-note\n-w Use this option if fzf breaks due to tiling in ur WM or just export WCO_CLI_WM='true'\n-h For what u r seeing right now\n" && exit 1 ;;
 	esac
 done
 shift $((OPTIND - 1))
 
+[ -z "$anime_link" ] && {
 [ -z "$*" ] && printf '\033[1;35mSearch Cartoon/Anime\n> \033[0m' && read -r name || name="$*"
 printf '\033[1;36mSearching Cartoon/Anime - %s\033[0m\n' "$name"
 
 data="$(curl -sA "$agent" "https://$base_url/search" --data-urlencode "catara=$name" -d 'konuara=series' | sed -nE "s,^<a href=\"(/anime/[^\"]*)\".*>(.*)</a>,https://$base_url\1	\2,p")"
 [ -z "$data" ] && printf '\033[1;31mNo Result\033[0m\n' && exit 1 || selected="$(printf '%s' "$data" | fzf --with-nth 2.. --height=33% --layout=reverse --cycle --prompt 'Select a Cartoon/Anime: ')"
 [ -z "$selected" ] && printf "Nothing's selected\n" && exit || title="${selected##*	}"
-data="$(curl -sA "$agent" "${selected%%	*}" | sed -nE "s,^[[:space:]]*<li><a href=\"(https://$base_url/[^\"]*)\".*class=\"sonra\">(.*)</a>.*,\1	\2,p" | tac)"
+anime_link="${selected%%	*}"
+}
+data="$(curl -sA "$agent" "$anime_link")"
 [ -z "$data" ] && printf '\033[1;31mNo result\033[0m\n' && exit 1
+[ -z "$title" ] && title="$(printf '%s' "$data" | sed -nE 's,    <td class="vsbaslik" valign="top"><h2 title=".*">(.*)</h2></td>.,\1,p')"
+data="$(printf '%s' "$data" | sed -nE "s,^[[:space:]]*<li><a href=\"(https://$base_url/[^\"]*)\".*class=\"sonra\">(.*)</a>.*,\1	\2,p" | tac)"
 num_ep="$(printf '%s\n' "$data" | wc -l)"
 
 selection () {
@@ -36,6 +42,7 @@ selection () {
 	download) is_download=y ;;
         *) selected="$(printf '%s' "$data" | nl | sed 's/^ *//' | fzf --with-nth 3.. -m --reverse --cycle --prompt 'Select a Episode: ')"
         [ -z "$selected" ] && printf "Nothing's selected\n" && exit
+
 	start="$(printf '%s' "$selected" | head -1)"
 	start="${start%%	*}"
 	end="$(printf '%s' "$selected" | tail -1)"
@@ -83,7 +90,7 @@ play () {
     if uname -a | grep -qE '[Aa]ndroid'; then
 	am start --user 0 -a android.intent.action.VIEW -d "$vid_link" -n is.xyz.mpv/.MPVActivity > /dev/null 2>&1 &
     else
-        mpv --no-terminal --force-window=immediate --force-media-title="$ep_title out of $num_ep" --user-agent="$agent" "$vid_link" &
+        mpv --speed=1 --no-terminal --force-window=immediate --force-media-title="$ep_title out of $num_ep" --user-agent="$agent" "$vid_link" &
     fi
 }    
 
