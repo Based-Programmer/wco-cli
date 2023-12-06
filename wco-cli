@@ -5,7 +5,7 @@ is_download="${WCO_CLI_DOWNLOAD:-n}"
 download_dir="${WCO_CLI_DOWNLOAD_DIR:-$HOME/Videos}"
 agent='uwu'
 wm="${WCO_CLI_WM:-false}"
-base_url='www.wcostream.org'
+base_url='www.wcostream.tv'
 
 while getopts 'dp:q:wa:h' OPT; do
     case $OPT in
@@ -14,8 +14,26 @@ while getopts 'dp:q:wa:h' OPT; do
 	q) quality=$OPTARG ;;
 	w) wm='true' ;;
 	a) anime_link="$OPTARG" ;;
-	*) printf "\nEnjoy watching Cartoons & Animes from wcostream.net\n\nDependencies: curl, fzf, nodejs(for decoding the link), mpv (Streaming video), aria2 (Optimal, for downloading)\n\nFor using this script inside termux u should've mpv-android installed with \"user-agent='Mozilla/5.0'\" inside Settings/Advanced/'Edit mpv.conf' & no referrer\n\nUsage:\nwco-cli <Options> <search term>\n\nOptions:\n-d Download Cartoons/Animes in ~/Videos\n-p Select Download Directory\n-q Select Video Quality [fhd|hd|sd]\n-a Direct Anime Link like -a https://www.wcostream.org/anime/death-note\n-w Use this option if fzf breaks due to tiling in ur WM or just export WCO_CLI_WM='true'\n-h For what u r seeing right now\n" && exit 1 ;;
-	esac
+	*) printf "
+Enjoy watching Cartoons & Animes from wcostream.net
+    
+Dependencies: curl, fzf, nodejs(for decoding the link),mpv (Streaming video), aria2 (Optimal, for downloading)
+
+
+For using this script inside termux u should've mpv-android installed with \"user-agent='Mozilla/5.0'\" inside Settings/Advanced/'Edit mpv.conf' & no referrer
+    
+Usage:
+wco-cli <Options> <search term>
+    
+Options:
+-d Download Cartoons/Animes in ~/Videos
+-p Select Download Directory
+-q Select Video Quality [fhd|hd|sd]
+-a Direct Anime Link like -a https://www.wcostream.org/anime/death-note
+-w Use this option if fzf breaks due to tiling in ur WM or just export WCO_CLI_WM='true'
+-h For what u r seeing right now
+" && exit 1 ;;
+    esac
 done
 shift $((OPTIND - 1))
 
@@ -30,7 +48,7 @@ anime_link="${selected%%	*}"
 }
 data="$(curl -sA "$agent" "$anime_link")"
 [ -z "$data" ] && printf '\033[1;31mNo result\033[0m\n' && exit 1
-[ -z "$title" ] && title="$(printf '%s' "$data" | sed -nE 's,    <td class="vsbaslik" valign="top"><h2 title=".*">(.*)</h2></td>.,\1,p')"
+[ -z "$title" ] && title="$(printf '%s' "$data" | sed -nE 's,^    <td class="vsbaslik" valign="top"><h2 title=".*">(.*)</h2></td>.$,\1,p')"
 data="$(printf '%s' "$data" | sed -nE "s,^[[:space:]]*<li><a href=\"(https://$base_url/[^\"]*)\".*class=\"sonra\">(.*)</a>.*,\1	\2,p" | tac)"
 num_ep="$(printf '%s\n' "$data" | wc -l)"
 
@@ -60,8 +78,8 @@ fetch_link () {
     selected="$(printf '%s' "$data" | sed "$start !d")"
     [ "$num_ep" -gt 1 ] && ep_title="${selected##*	}"
     video_js_data="$(curl -sA "$agent" "${selected%%	*}")"
-    #printf '%s\n' "$video_js_data" > ~/.cache/Test/wco.html
-    link="$(printf '%s' "$video_js_data" | sed -nE '/^[[:space:]]*<iframe id=.*src="https:\/\/embed\.watchanimesub\.net\/inc\/embed\/video-js\.php\?file=./ {s,^[[:space:]]*<iframe id=.*src="(https://embed\.watchanimesub\.net/inc/embed/video-js\.php\?file=.[^"]*).*,\1,p;q}')"
+    #printf '%s\n' "$video_js_data" > ~/.cache/wco.html
+    link="$(printf '%s' "$video_js_data" | sed -nE '/^<br \/><iframe id=.*src="https:\/\/embed\.watchanimesub\.net\/inc\/embed\/video-js\.php\?file=./ {s,^<br /><iframe id=.*src="(https://embed\.watchanimesub\.net/inc/embed/video-js\.php\?file=.[^"]*).*,\1,p;q}')"
     [ -z "$link" ] && link="$(node -e "$(printf '%s' "$video_js_data" | sed -nE '/<script>.*document\.write\(decodeURIComponent.*<\/script>/ {s|<script>(.*)document\.write\(decodeURIComponent\(escape\(([^\)]*)\).*|\1 console.log(\2.replace(/.*src="(https:\\/\\/embed\\.watchanimesub\\.net\\/[^"]*)[\\s\\S]*/, "$1"))\;|p;q}')")"
     #printf '%s\n' "$link" > ~/.cache/link
 
